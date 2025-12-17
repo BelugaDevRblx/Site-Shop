@@ -90,11 +90,13 @@ function setupRealtime() {
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, payload => {
             console.log('Message change detected:', payload);
-            // Reload if currently viewing a ticket
+            // Reload messages if currently viewing this ticket
             const modal = document.getElementById('ticketDetailModal');
             if (modal.classList.contains('active')) {
                 const currentTicketId = modal.dataset.currentTicketId;
-                if (currentTicketId) openTicketDetail(currentTicketId);
+                if (currentTicketId && payload.new && payload.new.ticket_id === currentTicketId) {
+                    reloadMessages(currentTicketId);
+                }
             }
         })
         .subscribe();
@@ -290,7 +292,13 @@ function setupReplyForm(ticketId) {
                 content: message
             }]);
             if (error) throw error;
+            
+            // Clear the textarea
             document.getElementById('replyMessage').value = '';
+            
+            // Reload messages instantly
+            await reloadMessages(ticketId);
+            
             submitBtn.disabled = false;
             submitBtn.innerHTML = '<span>Send</span>';
         } catch (error) {
@@ -300,6 +308,29 @@ function setupReplyForm(ticketId) {
             submitBtn.innerHTML = '<span>Send</span>';
         }
     });
+}
+
+// Function to reload just the messages without closing the modal
+async function reloadMessages(ticketId) {
+    try {
+        const { data: messages, error } = await window.sb
+            .from('messages')
+            .select('*')
+            .eq('ticket_id', ticketId)
+            .order('created_at', { ascending: true });
+        
+        if (error) throw error;
+        
+        // Update just the messages list
+        const messagesList = document.querySelector('.messages-list');
+        if (messagesList) {
+            messagesList.innerHTML = messages.map(msg => createMessageHTML(msg)).join('');
+            // Scroll to bottom
+            messagesList.scrollTop = messagesList.scrollHeight;
+        }
+    } catch (error) {
+        console.error('Error reloading messages:', error);
+    }
 }
 
 async function closeTicket(ticketId) {
