@@ -16,6 +16,7 @@ async function hashPassword(pass) {
     return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+// LOGIN
 document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const u = document.getElementById('loginUsername').value.trim();
@@ -27,7 +28,7 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
     
     try {
         const h = await hashPassword(p);
-        const { data, error } = await window.supabase.from('users').select('*').eq('username', u).eq('password', h).limit(1);
+        const { data, error } = await window.sb.from('users').select('*').eq('username', u).eq('password', h).limit(1);
         if (error) throw error;
         if (!data || data.length === 0) {
             showError('Wrong credentials');
@@ -36,21 +37,23 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
             return;
         }
         const user = data[0];
-        user.role = window.getUserRole(user.username);
+        user.role = getUserRole(user.username);
         sessionStorage.setItem('currentUser', JSON.stringify(user));
         window.location.href = 'dashboard.html';
     } catch (err) {
+        console.error(err);
         showError('Error: ' + err.message);
         btn.innerHTML = txt;
         btn.disabled = false;
     }
 });
 
+// REGISTER
 document.getElementById('registerForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const u = document.getElementById('registerUsername').value.trim();
     const p = document.getElementById('registerPassword').value;
-    if (p.length < 6) return showError('Password too short');
+    if (p.length < 6) return showError('Password must be 6+ characters');
     
     const btn = e.target.querySelector('button[type="submit"]');
     const txt = btn.innerHTML;
@@ -58,23 +61,24 @@ document.getElementById('registerForm')?.addEventListener('submit', async (e) =>
     btn.disabled = true;
     
     try {
-        const { data: ex } = await window.supabase.from('users').select('username').eq('username', u).limit(1);
+        const { data: ex } = await window.sb.from('users').select('username').eq('username', u).limit(1);
         if (ex && ex.length > 0) {
-            showError('Username taken');
+            showError('Username already taken');
             btn.innerHTML = txt;
             btn.disabled = false;
             return;
         }
         const h = await hashPassword(p);
-        const r = window.getUserRole(u);
-        const { data, error } = await window.supabase.from('users').insert([{ username: u, password: h, role: r }]).select();
+        const r = getUserRole(u);
+        const { data, error } = await window.sb.from('users').insert([{ username: u, password: h, role: r }]).select();
         if (error) throw error;
         const user = data[0];
         user.role = r;
         sessionStorage.setItem('currentUser', JSON.stringify(user));
-        alert('✅ Success!');
+        alert('✅ Account created!');
         window.location.href = 'dashboard.html';
     } catch (err) {
+        console.error(err);
         showError('Error: ' + err.message);
         btn.innerHTML = txt;
         btn.disabled = false;
