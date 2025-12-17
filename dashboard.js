@@ -3,39 +3,16 @@ let currentFilter = 'all';
 let allTickets = [];
 let realtimeChannel = null;
 
-// Sound effects
-const sounds = {
-    newTicket: new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIGmi78OaeTBENUKvo8LFfHAU7k9nyz3koBSl+zPLaizsKGGS36+mgVBELTKXh8bllHAU2jdTu0HwlBSh+zO3akDsLF2S56eypVRELTKXi7rljHAU1jNTu0HwlBSh9y+3akDsKGGS36+ihUxELTKXi7rdjHAU2jdTu0HslBSl+ze3bkDsKGGS46+mjVBILTKXh8blmHAU2jtXu0XwlBSp/ze7bkjsKGWS46+mjUxILTabi7rhjHAY2j9Tu0nwmBSp/zu7bkjwKGGO46eujUxILTaXi77hjHAY2kNTu0nwlBSp/zu7cjzsKGGO36OykUxMMTaXj77hjHAY2j9Xu0XwlBSp+ze7bkTsKGGS46+ykUxEMTaXi77ljHAU1j9Xu0XwlBSl+zO7bkTsKGGO46uyjVBEMTKXj77hjHAY2j9Xu0XwlBSp/zu7bkjsKGGS46+mjVBELTKXi8LdjHAU2j9Tu0HwlBSp+ze3bkjsKGGO46umjVBILTKXj8LljHAU2jtTu0HwlBSp+ze3akTsKGGO46uijVBELTKXi8LljHAU2jtTu0HwkBSp+ze7bkDsKGGS46+mjVBELTKXi77hjHAU2j9Tu0HwlBSp+zu7akDsKGGS46+qjVBELTKXi8LhjHAU1jtTu0HwlBSp+zu7akDsKGWS46+mjVBELTKXj77ljHAU1jtTu0HwlBSp+zu3akDsKGWS36+mjVBELTKXj77ljHAU1jtTtz3slBSp+zu3akDsKGWO36+mjUxELTKbi77hjHAU1jdPu0HwlBSp9zu7akDsKGWO36umkUxIMTKbi77djHAU1jdPu0HwkBSl9zu7akjoKF2O46+mjUxEMTKbi7rhkGwU1jdPu0HwkBSl9zu7akjoKF2O46+mjUxEMTKbi7rhjHAU1jdPu0HwkBSl9zu7akjoKF2O46+mjUxEMTKbi7rhjHAU1jdPu0HwkBSl9zu7akjoKF2O46+mjUxEMTKbi7rhjHAU1jdPu0HwkBSl9zu7akjoKF2O46+mjUxEMTKbi7rhjHAU1jdPu0HwkBSl9zu7akjoKF2O46+mjUxEMTKbi7rhjHAU1jdPu0HwkBSl9zu7akjoKF2O46+mjUxEMTKbi7rhjHAU1jdPu0HwkBSl9zu7akjoKF2O46+mjUxEMTKbi7rhjHAU1jdPu0HwkBSl9zu7akjoKF2O46+mjUxEMTKbi7rhjHAU1jdPu0HwkBSl9zu7akjoKF2O46+mjUxEMTKbi7rhjHAU1jdPu0HwkBSl9zu7akjoKF2O46+mjUxEMTKbi'),
-    newMessage: new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=')
-};
+// Sound notifications with external MP3
+const notificationSound = new Audio('./Notify.mp3'); // Your MP3 file
+notificationSound.volume = 0.5; // 50% volume (0.0 to 1.0)
 
-// Better sounds using Web Audio API
-function playSound(type) {
+function playNotification() {
     try {
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        
-        if (type === 'newTicket') {
-            // Pleasant notification sound
-            oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
-            oscillator.frequency.exponentialRampToValueAtTime(600, audioContext.currentTime + 0.1);
-            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.5);
-        } else if (type === 'newMessage') {
-            // Quick pop sound
-            oscillator.frequency.setValueAtTime(1000, audioContext.currentTime);
-            oscillator.frequency.exponentialRampToValueAtTime(800, audioContext.currentTime + 0.05);
-            gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.1);
-        }
+        notificationSound.currentTime = 0; // Reset to start
+        notificationSound.play().catch(err => {
+            console.log('Sound play failed:', err);
+        });
     } catch (error) {
         console.log('Audio not supported');
     }
@@ -117,26 +94,46 @@ function setupNavigation() {
     });
 }
 
-// Setup real-time updates with sounds
+// Setup real-time updates with smart notifications
 function setupRealtime() {
     if (realtimeChannel) realtimeChannel.unsubscribe();
     
     realtimeChannel = window.sb.channel('tickets-realtime')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tickets' }, payload => {
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tickets' }, async (payload) => {
             console.log('New ticket created:', payload);
-            playSound('newTicket');
+            
+            // Play sound only for staff/owner
+            if (isStaff(currentUser.username)) {
+                playNotification();
+            }
+            
             loadTickets();
         })
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tickets' }, payload => {
             console.log('Ticket updated:', payload);
             loadTickets();
         })
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, async (payload) => {
             console.log('New message:', payload);
-            // Play sound only if message is NOT from current user
-            if (payload.new.author !== currentUser.username) {
-                playSound('newMessage');
+            
+            // Get the ticket to check ownership
+            const { data: ticket } = await window.sb
+                .from('tickets')
+                .select('username')
+                .eq('id', payload.new.ticket_id)
+                .single();
+            
+            // Play sound logic:
+            // 1. If I'm staff/owner AND I didn't write the message → play
+            // 2. If I'm the ticket owner AND I didn't write the message → play
+            const isMyTicket = ticket && ticket.username === currentUser.username;
+            const isMessageFromMe = payload.new.author === currentUser.username;
+            const amIStaff = isStaff(currentUser.username);
+            
+            if (!isMessageFromMe && (isMyTicket || amIStaff)) {
+                playNotification();
             }
+            
             // Reload messages if viewing this ticket
             const modal = document.getElementById('ticketDetailModal');
             if (modal.classList.contains('active')) {
