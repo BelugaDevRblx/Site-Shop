@@ -3,6 +3,44 @@ let currentFilter = 'all';
 let allTickets = [];
 let realtimeChannel = null;
 
+// Sound effects
+const sounds = {
+    newTicket: new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIGmi78OaeTBENUKvo8LFfHAU7k9nyz3koBSl+zPLaizsKGGS36+mgVBELTKXh8bllHAU2jdTu0HwlBSh+zO3akDsLF2S56eypVRELTKXi7rljHAU1jNTu0HwlBSh9y+3akDsKGGS36+ihUxELTKXi7rdjHAU2jdTu0HslBSl+ze3bkDsKGGS46+mjVBILTKXh8blmHAU2jtXu0XwlBSp/ze7bkjsKGWS46+mjUxILTabi7rhjHAY2j9Tu0nwmBSp/zu7bkjwKGGO46eujUxILTaXi77hjHAY2kNTu0nwlBSp/zu7cjzsKGGO36OykUxMMTaXj77hjHAY2j9Xu0XwlBSp+ze7bkTsKGGS46+ykUxEMTaXi77ljHAU1j9Xu0XwlBSl+zO7bkTsKGGO46uyjVBEMTKXj77hjHAY2j9Xu0XwlBSp/zu7bkjsKGGS46+mjVBELTKXi8LdjHAU2j9Tu0HwlBSp+ze3bkjsKGGO46umjVBILTKXj8LljHAU2jtTu0HwlBSp+ze3akTsKGGO46uijVBELTKXi8LljHAU2jtTu0HwkBSp+ze7bkDsKGGS46+mjVBELTKXi77hjHAU2j9Tu0HwlBSp+zu7akDsKGGS46+qjVBELTKXi8LhjHAU1jtTu0HwlBSp+zu7akDsKGWS46+mjVBELTKXj77ljHAU1jtTu0HwlBSp+zu3akDsKGWS36+mjVBELTKXj77ljHAU1jtTtz3slBSp+zu3akDsKGWO36+mjUxELTKbi77hjHAU1jdPu0HwlBSp9zu7akDsKGWO36umkUxIMTKbi77djHAU1jdPu0HwkBSl9zu7akjoKF2O46+mjUxEMTKbi7rhkGwU1jdPu0HwkBSl9zu7akjoKF2O46+mjUxEMTKbi7rhjHAU1jdPu0HwkBSl9zu7akjoKF2O46+mjUxEMTKbi7rhjHAU1jdPu0HwkBSl9zu7akjoKF2O46+mjUxEMTKbi7rhjHAU1jdPu0HwkBSl9zu7akjoKF2O46+mjUxEMTKbi7rhjHAU1jdPu0HwkBSl9zu7akjoKF2O46+mjUxEMTKbi7rhjHAU1jdPu0HwkBSl9zu7akjoKF2O46+mjUxEMTKbi7rhjHAU1jdPu0HwkBSl9zu7akjoKF2O46+mjUxEMTKbi7rhjHAU1jdPu0HwkBSl9zu7akjoKF2O46+mjUxEMTKbi7rhjHAU1jdPu0HwkBSl9zu7akjoKF2O46+mjUxEMTKbi7rhjHAU1jdPu0HwkBSl9zu7akjoKF2O46+mjUxEMTKbi'),
+    newMessage: new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=')
+};
+
+// Better sounds using Web Audio API
+function playSound(type) {
+    try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        if (type === 'newTicket') {
+            // Pleasant notification sound
+            oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(600, audioContext.currentTime + 0.1);
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.5);
+        } else if (type === 'newMessage') {
+            // Quick pop sound
+            oscillator.frequency.setValueAtTime(1000, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(800, audioContext.currentTime + 0.05);
+            gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.1);
+        }
+    } catch (error) {
+        console.log('Audio not supported');
+    }
+}
+
 // Profanity filter
 const PROFANITY_LIST = ['fuck', 'shit', 'bitch', 'asshole', 'dick', 'pussy', 'nigger', 'nigga', 'cunt', 'whore', 'slut', 'faggot', 'retard', 'porn', 'sex', 'xxx'];
 
@@ -79,22 +117,31 @@ function setupNavigation() {
     });
 }
 
-// Setup real-time updates
+// Setup real-time updates with sounds
 function setupRealtime() {
     if (realtimeChannel) realtimeChannel.unsubscribe();
     
     realtimeChannel = window.sb.channel('tickets-realtime')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, payload => {
-            console.log('Ticket change detected:', payload);
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tickets' }, payload => {
+            console.log('New ticket created:', payload);
+            playSound('newTicket');
             loadTickets();
         })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, payload => {
-            console.log('Message change detected:', payload);
-            // Reload messages if currently viewing this ticket
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tickets' }, payload => {
+            console.log('Ticket updated:', payload);
+            loadTickets();
+        })
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+            console.log('New message:', payload);
+            // Play sound only if message is NOT from current user
+            if (payload.new.author !== currentUser.username) {
+                playSound('newMessage');
+            }
+            // Reload messages if viewing this ticket
             const modal = document.getElementById('ticketDetailModal');
             if (modal.classList.contains('active')) {
                 const currentTicketId = modal.dataset.currentTicketId;
-                if (currentTicketId && payload.new && payload.new.ticket_id === currentTicketId) {
+                if (currentTicketId === payload.new.ticket_id) {
                     reloadMessages(currentTicketId);
                 }
             }
@@ -198,6 +245,14 @@ async function openTicketDetail(ticketId) {
         
         content.innerHTML = createTicketDetailHTML(ticket, messages);
         setupReplyForm(ticketId);
+        
+        // Scroll to bottom of messages
+        setTimeout(() => {
+            const messagesList = document.querySelector('.messages-list');
+            if (messagesList) {
+                messagesList.scrollTop = messagesList.scrollHeight;
+            }
+        }, 100);
     } catch (error) {
         console.error('Error:', error);
         content.innerHTML = '<div class="loading">❌ Loading error: ' + error.message + '</div>';
@@ -228,7 +283,7 @@ function createTicketDetailHTML(ticket, messages) {
         </div>
         <div class="messages-section">
             <h3 class="messages-title">💬 Messages</h3>
-            <div class="messages-list">${messages.map(msg => createMessageHTML(msg)).join('')}</div>
+            <div class="messages-list" id="messagesList">${messages.map(msg => createMessageHTML(msg)).join('')}</div>
             ${ticket.status === 'open' ? `
                 <form class="reply-form" id="replyForm">
                     <div class="form-group">
@@ -257,7 +312,7 @@ function createMessageHTML(message) {
     const filteredContent = filterProfanity(message.content);
     
     return `
-        <div class="message ${staffClass}">
+        <div class="message ${staffClass}" data-message-id="${message.id}">
             <div class="message-header">
                 <span class="message-author">${message.author} ${getRoleEmoji(message.author_role)}</span>
                 <span class="message-date">${formattedDate}</span>
@@ -296,11 +351,10 @@ function setupReplyForm(ticketId) {
             // Clear the textarea
             document.getElementById('replyMessage').value = '';
             
-            // Reload messages instantly
-            await reloadMessages(ticketId);
-            
             submitBtn.disabled = false;
             submitBtn.innerHTML = '<span>Send</span>';
+            
+            // Messages will reload automatically via realtime
         } catch (error) {
             console.error('Error:', error);
             alert('❌ Error sending message: ' + error.message);
@@ -310,7 +364,7 @@ function setupReplyForm(ticketId) {
     });
 }
 
-// Function to reload just the messages without closing the modal
+// Function to reload just the messages
 async function reloadMessages(ticketId) {
     try {
         const { data: messages, error } = await window.sb
@@ -321,12 +375,18 @@ async function reloadMessages(ticketId) {
         
         if (error) throw error;
         
-        // Update just the messages list
-        const messagesList = document.querySelector('.messages-list');
+        const messagesList = document.getElementById('messagesList');
         if (messagesList) {
+            // Store current scroll position
+            const wasAtBottom = messagesList.scrollHeight - messagesList.scrollTop <= messagesList.clientHeight + 50;
+            
+            // Update messages
             messagesList.innerHTML = messages.map(msg => createMessageHTML(msg)).join('');
-            // Scroll to bottom
-            messagesList.scrollTop = messagesList.scrollHeight;
+            
+            // Scroll to bottom if was at bottom or new message
+            if (wasAtBottom) {
+                messagesList.scrollTop = messagesList.scrollHeight;
+            }
         }
     } catch (error) {
         console.error('Error reloading messages:', error);
