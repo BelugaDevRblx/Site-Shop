@@ -1,4 +1,4 @@
-// Smooth scrolling for anchors
+// Smooth scrolling
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', function (e) {
         const href = this.getAttribute('href');
@@ -6,16 +6,13 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             e.preventDefault();
             const target = document.querySelector(href);
             if (target) {
-                target.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
-                });
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
         }
     });
 });
 
-// Active nav link on scroll
+// Active nav on scroll
 window.addEventListener('scroll', () => {
     const sections = document.querySelectorAll('section[id]');
     const scrollY = window.pageYOffset;
@@ -52,40 +49,30 @@ function closeTicketModal() {
     document.getElementById('ticketForm').reset();
 }
 
-// Close modal on backdrop click
+// Close modal on backdrop
 document.getElementById('ticketModal')?.addEventListener('click', (e) => {
-    if (e.target.id === 'ticketModal') {
-        closeTicketModal();
-    }
+    if (e.target.id === 'ticketModal') closeTicketModal();
 });
 
-// Escape key to close modal
+// Escape to close
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        closeTicketModal();
-    }
+    if (e.key === 'Escape') closeTicketModal();
 });
 
-// Handle ticket form submission
+// Ticket form submit
 document.getElementById('ticketForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const submitBtn = e.target.querySelector('button[type="submit"]');
     const originalText = submitBtn.innerHTML;
-    submitBtn.innerHTML = '<span>Creating ticket...</span>';
+    submitBtn.innerHTML = '<span>Creating...</span>';
     submitBtn.disabled = true;
 
     try {
-        // Check if Supabase is initialized
-        if (!window.supabase || !supabase) {
-            throw new Error('Supabase not initialized. Check your configuration.');
-        }
-        
-        // Check if user is logged in
         const currentUser = sessionStorage.getItem('currentUser');
         
         if (!currentUser) {
-            alert('You must be logged in to create a ticket. Redirecting to login page...');
+            alert('You must be logged in. Redirecting...');
             window.location.href = 'login.html';
             return;
         }
@@ -111,46 +98,34 @@ document.getElementById('ticketForm')?.addEventListener('submit', async (e) => {
 
         if (error) throw error;
 
-        // Add automatic initial message
-        await supabase
-            .from('messages')
-            .insert([{
-                ticket_id: data[0].id,
-                author: 'System',
-                author_role: 'system',
-                content: `Ticket created successfully! A member of our team will contact you soon.
-                
+        await supabase.from('messages').insert([{
+            ticket_id: data[0].id,
+            author: 'System',
+            author_role: 'system',
+            content: `Ticket created successfully!
+
 Product: ${ticketData.product}
 Price: ${ticketData.price}
-Roblox Username: ${ticketData.roblox_username}
+Roblox: ${ticketData.roblox_username}
 Email: ${ticketData.contact_email}
-Payment Method: ${ticketData.payment_method}
+Payment: ${ticketData.payment_method}
 
 ${ticketData.additional_message ? 'Message: ' + ticketData.additional_message : ''}`
-            }]);
+        }]);
 
-        alert('✅ Ticket created successfully! You can view it in your customer area.');
+        alert('✅ Ticket created!');
         closeTicketModal();
-        
-        // Redirect to dashboard
-        setTimeout(() => {
-            window.location.href = 'dashboard.html';
-        }, 1000);
+        setTimeout(() => window.location.href = 'dashboard.html', 1000);
 
     } catch (error) {
         console.error('Error:', error);
-        alert('❌ Error creating ticket: ' + error.message);
+        alert('❌ Error: ' + error.message);
         submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
     }
 });
 
-// Animation on scroll
-const observerOptions = {
-    threshold: 0.1,
-    rootMargin: '0px 0px -50px 0px'
-};
-
+// Scroll animations
 const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
         if (entry.isIntersecting) {
@@ -158,9 +133,8 @@ const observer = new IntersectionObserver((entries) => {
             entry.target.style.transform = 'translateY(0)';
         }
     });
-}, observerOptions);
+}, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
 
-// Observe elements for animation
 document.querySelectorAll('.product-card, .feature-item').forEach(el => {
     el.style.opacity = '0';
     el.style.transform = 'translateY(20px)';
@@ -168,7 +142,7 @@ document.querySelectorAll('.product-card, .feature-item').forEach(el => {
     observer.observe(el);
 });
 
-// Check if user is logged in
+// Check if logged in
 window.addEventListener('DOMContentLoaded', () => {
     const currentUser = sessionStorage.getItem('currentUser');
     const loginBtn = document.querySelector('.btn-login');

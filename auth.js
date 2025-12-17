@@ -1,22 +1,19 @@
-// Toggle between login and register
+// Toggle register section
 function toggleRegister() {
     const registerSection = document.getElementById('registerSection');
     const isVisible = registerSection.style.display === 'block';
     registerSection.style.display = isVisible ? 'none' : 'block';
 }
 
-// Show error message
+// Show error
 function showError(message) {
     const errorDiv = document.getElementById('errorMessage');
     errorDiv.textContent = message;
     errorDiv.classList.add('show');
-    
-    setTimeout(() => {
-        errorDiv.classList.remove('show');
-    }, 5000);
+    setTimeout(() => errorDiv.classList.remove('show'), 5000);
 }
 
-// Hash password (simple client-side hashing - in production use bcrypt on server)
+// Hash password
 async function hashPassword(password) {
     const encoder = new TextEncoder();
     const data = encoder.encode(password);
@@ -25,27 +22,21 @@ async function hashPassword(password) {
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-// Login form submission
+// LOGIN
 document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     
     const username = document.getElementById('loginUsername').value.trim();
     const password = document.getElementById('loginPassword').value;
-    
     const submitBtn = e.target.querySelector('button[type="submit"]');
     const originalText = submitBtn.innerHTML;
+    
     submitBtn.innerHTML = '<span>Logging in...</span>';
     submitBtn.disabled = true;
     
     try {
-        // Check if Supabase is initialized
-        if (!window.supabase || !supabase) {
-            throw new Error('Supabase not initialized. Check your configuration.');
-        }
-        
         const hashedPassword = await hashPassword(password);
         
-        // Look for user in database
         const { data: users, error } = await supabase
             .from('users')
             .select('*')
@@ -63,15 +54,8 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
         }
         
         const user = users[0];
-        
-        // Determine user role (function from config.js)
-        const role = getUserRole(user.username);
-        user.role = role;
-        
-        // Save user to session
+        user.role = getUserRole(user.username);
         sessionStorage.setItem('currentUser', JSON.stringify(user));
-        
-        // Redirect
         window.location.href = 'dashboard.html';
         
     } catch (error) {
@@ -82,7 +66,7 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
     }
 });
 
-// Register form submission
+// REGISTER
 document.getElementById('registerForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     
@@ -90,22 +74,17 @@ document.getElementById('registerForm')?.addEventListener('submit', async (e) =>
     const password = document.getElementById('registerPassword').value;
     
     if (password.length < 6) {
-        showError('Password must contain at least 6 characters');
+        showError('Password must be at least 6 characters');
         return;
     }
     
     const submitBtn = e.target.querySelector('button[type="submit"]');
     const originalText = submitBtn.innerHTML;
+    
     submitBtn.innerHTML = '<span>Registering...</span>';
     submitBtn.disabled = true;
     
     try {
-        // Check if Supabase is initialized
-        if (!window.supabase || !supabase) {
-            throw new Error('Supabase not initialized. Check your configuration.');
-        }
-        
-        // Check if user already exists
         const { data: existingUsers } = await supabase
             .from('users')
             .select('username')
@@ -113,16 +92,15 @@ document.getElementById('registerForm')?.addEventListener('submit', async (e) =>
             .limit(1);
         
         if (existingUsers && existingUsers.length > 0) {
-            showError('This username is already taken');
+            showError('Username already taken');
             submitBtn.innerHTML = originalText;
             submitBtn.disabled = false;
             return;
         }
         
         const hashedPassword = await hashPassword(password);
-        const role = getUserRole(username); // Function from config.js
+        const role = getUserRole(username);
         
-        // Create user
         const { data, error } = await supabase
             .from('users')
             .insert([{
@@ -134,12 +112,11 @@ document.getElementById('registerForm')?.addEventListener('submit', async (e) =>
         
         if (error) throw error;
         
-        // Auto-login after registration
         const user = data[0];
         user.role = role;
         sessionStorage.setItem('currentUser', JSON.stringify(user));
         
-        alert('✅ Account created successfully! Redirecting...');
+        alert('✅ Account created successfully!');
         window.location.href = 'dashboard.html';
         
     } catch (error) {
