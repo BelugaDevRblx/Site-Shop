@@ -13,7 +13,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     
     currentUser = JSON.parse(userData);
     
-    // Mettre à jour l'interface avec les infos utilisateur
+    // Update interface with user info
     document.getElementById('userName').textContent = currentUser.username;
     document.getElementById('userRole').textContent = getRoleDisplay(currentUser.role);
     document.getElementById('profileUsername').textContent = currentUser.username;
@@ -21,10 +21,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     
     if (currentUser.created_at) {
         const date = new Date(currentUser.created_at);
-        document.getElementById('profileCreated').textContent = date.toLocaleDateString('fr-FR');
+        document.getElementById('profileCreated').textContent = date.toLocaleDateString('en-US');
     }
     
-    // Définir l'avatar selon le rôle
+    // Set avatar according to role
     const avatarElement = document.getElementById('userAvatar');
     if (currentUser.role === 'owner') {
         avatarElement.textContent = '👑';
@@ -34,7 +34,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         avatarElement.style.background = 'linear-gradient(135deg, #a855f7, #ec4899)';
     }
     
-    // Charger les tickets
+    // Load tickets
     await loadTickets();
     
     // Setup navigation
@@ -46,7 +46,7 @@ function getRoleDisplay(role) {
     const roles = {
         'owner': '👑 Owner',
         'staff': '⭐ Staff',
-        'user': '👤 Client'
+        'user': '👤 User'
     };
     return roles[role] || roles.user;
 }
@@ -72,8 +72,8 @@ function setupNavigation() {
             
             // Update page title
             const titles = {
-                'tickets': 'Mes Tickets',
-                'profile': 'Mon Profil'
+                'tickets': 'My Tickets',
+                'profile': 'My Profile'
             };
             document.getElementById('pageTitle').textContent = titles[section] || 'Dashboard';
         });
@@ -83,12 +83,17 @@ function setupNavigation() {
 // Load tickets
 async function loadTickets() {
     const ticketsList = document.getElementById('ticketsList');
-    ticketsList.innerHTML = '<div class="loading">Chargement des tickets...</div>';
+    ticketsList.innerHTML = '<div class="loading">Loading tickets...</div>';
     
     try {
+        // Check if Supabase is initialized
+        if (!window.supabase || !supabase) {
+            throw new Error('Supabase not initialized. Check your configuration.');
+        }
+        
         let query = supabase.from('tickets').select('*');
         
-        // Si l'utilisateur n'est pas staff, ne montrer que ses tickets
+        // If user is not staff, only show their tickets
         if (!isStaff(currentUser.username)) {
             query = query.eq('user_id', currentUser.id);
         }
@@ -106,8 +111,8 @@ async function loadTickets() {
         displayTickets(allTickets);
         
     } catch (error) {
-        console.error('Erreur de chargement:', error);
-        ticketsList.innerHTML = '<div class="loading">❌ Erreur de chargement des tickets</div>';
+        console.error('Loading error:', error);
+        ticketsList.innerHTML = '<div class="loading">❌ Error loading tickets: ' + error.message + '</div>';
     }
 }
 
@@ -130,9 +135,9 @@ function displayTickets(tickets) {
         ticketsList.innerHTML = `
             <div class="empty-state">
                 <div class="empty-state-icon">🎫</div>
-                <div class="empty-state-title">Aucun ticket</div>
-                <div class="empty-state-text">Vous n'avez pas encore de tickets</div>
-                <a href="index.html#shop" class="btn btn-primary">Créer un ticket</a>
+                <div class="empty-state-title">No tickets</div>
+                <div class="empty-state-text">You don't have any tickets yet</div>
+                <a href="index.html#shop" class="btn btn-primary">Create a ticket</a>
             </div>
         `;
         return;
@@ -144,14 +149,14 @@ function displayTickets(tickets) {
 // Create ticket card HTML
 function createTicketCard(ticket) {
     const date = new Date(ticket.created_at);
-    const formattedDate = date.toLocaleDateString('fr-FR', {
+    const formattedDate = date.toLocaleDateString('en-US', {
         day: '2-digit',
         month: 'short',
         year: 'numeric'
     });
     
     const statusClass = ticket.status === 'open' ? 'open' : 'closed';
-    const statusText = ticket.status === 'open' ? 'Ouvert' : 'Fermé';
+    const statusText = ticket.status === 'open' ? 'Open' : 'Closed';
     
     return `
         <div class="ticket-card" onclick="openTicketDetail('${ticket.id}')">
@@ -208,12 +213,17 @@ async function openTicketDetail(ticketId) {
     const modal = document.getElementById('ticketDetailModal');
     const content = document.getElementById('ticketDetailContent');
     
-    content.innerHTML = '<div class="loading">Chargement...</div>';
+    content.innerHTML = '<div class="loading">Loading...</div>';
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
     
     try {
-        // Charger le ticket
+        // Check if Supabase is initialized
+        if (!window.supabase || !supabase) {
+            throw new Error('Supabase not initialized. Check your configuration.');
+        }
+        
+        // Load ticket
         const { data: ticket, error: ticketError } = await supabase
             .from('tickets')
             .select('*')
@@ -222,7 +232,7 @@ async function openTicketDetail(ticketId) {
         
         if (ticketError) throw ticketError;
         
-        // Charger les messages
+        // Load messages
         const { data: messages, error: messagesError } = await supabase
             .from('messages')
             .select('*')
@@ -231,22 +241,22 @@ async function openTicketDetail(ticketId) {
         
         if (messagesError) throw messagesError;
         
-        // Afficher le détail
+        // Display detail
         content.innerHTML = createTicketDetailHTML(ticket, messages);
         
         // Setup reply form
         setupReplyForm(ticketId);
         
     } catch (error) {
-        console.error('Erreur:', error);
-        content.innerHTML = '<div class="loading">❌ Loading error</div>';
+        console.error('Error:', error);
+        content.innerHTML = '<div class="loading">❌ Loading error: ' + error.message + '</div>';
     }
 }
 
 // Create ticket detail HTML
 function createTicketDetailHTML(ticket, messages) {
     const date = new Date(ticket.created_at);
-    const formattedDate = date.toLocaleDateString('fr-FR', {
+    const formattedDate = date.toLocaleDateString('en-US', {
         day: '2-digit',
         month: 'long',
         year: 'numeric',
@@ -255,7 +265,7 @@ function createTicketDetailHTML(ticket, messages) {
     });
     
     const statusClass = ticket.status === 'open' ? 'open' : 'closed';
-    const statusText = ticket.status === 'open' ? 'Open ⏳' : '✅ Closed';
+    const statusText = ticket.status === 'open' ? '⏳ Open' : '✅ Closed';
     
     return `
         <div class="ticket-detail-header">
@@ -268,11 +278,11 @@ function createTicketDetailHTML(ticket, messages) {
         
         <div class="ticket-detail-info">
             <div class="detail-row">
-                <span class="detail-label">Prix</span>
+                <span class="detail-label">Price</span>
                 <span class="detail-value">${ticket.price}</span>
             </div>
             <div class="detail-row">
-                <span class="detail-label">Pseudo Roblox</span>
+                <span class="detail-label">Roblox Username</span>
                 <span class="detail-value">${ticket.roblox_username}</span>
             </div>
             <div class="detail-row">
@@ -280,11 +290,11 @@ function createTicketDetailHTML(ticket, messages) {
                 <span class="detail-value">${ticket.contact_email}</span>
             </div>
             <div class="detail-row">
-                <span class="detail-label">Paiement</span>
+                <span class="detail-label">Payment</span>
                 <span class="detail-value">${ticket.payment_method}</span>
             </div>
             <div class="detail-row">
-                <span class="detail-label">Créé le</span>
+                <span class="detail-label">Created on</span>
                 <span class="detail-value">${formattedDate}</span>
             </div>
             ${isStaff(currentUser.username) ? `
@@ -304,20 +314,20 @@ function createTicketDetailHTML(ticket, messages) {
             ${ticket.status === 'open' ? `
                 <form class="reply-form" id="replyForm">
                     <div class="form-group">
-                        <label>Votre réponse</label>
-                        <textarea id="replyMessage" class="form-input" rows="4" required placeholder="Tapez votre message..."></textarea>
+                        <label>Your reply</label>
+                        <textarea id="replyMessage" class="form-input" rows="4" required placeholder="Type your message..."></textarea>
                     </div>
                     <button type="submit" class="btn btn-primary">
-                        <span>Envoyer</span>
+                        <span>Send</span>
                     </button>
                 </form>
-            ` : '<p style="text-align: center; color: var(--text-secondary);">Ce ticket est fermé</p>'}
+            ` : '<p style="text-align: center; color: var(--text-secondary);">This ticket is closed</p>'}
         </div>
         
         ${isStaff(currentUser.username) && ticket.status === 'open' ? `
             <div class="admin-actions">
                 <button class="btn btn-secondary" onclick="closeTicket('${ticket.id}')">
-                    <span>✓ Fermer le ticket</span>
+                    <span>✓ Close ticket</span>
                 </button>
             </div>
         ` : ''}
@@ -327,7 +337,7 @@ function createTicketDetailHTML(ticket, messages) {
 // Create message HTML
 function createMessageHTML(message) {
     const date = new Date(message.created_at);
-    const formattedDate = date.toLocaleDateString('fr-FR', {
+    const formattedDate = date.toLocaleDateString('en-US', {
         day: '2-digit',
         month: 'short',
         hour: '2-digit',
@@ -372,9 +382,14 @@ function setupReplyForm(ticketId) {
         
         const submitBtn = form.querySelector('button[type="submit"]');
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span>Envoi...</span>';
+        submitBtn.innerHTML = '<span>Sending...</span>';
         
         try {
+            // Check if Supabase is initialized
+            if (!window.supabase || !supabase) {
+                throw new Error('Supabase not initialized. Check your configuration.');
+            }
+            
             const { error } = await supabase
                 .from('messages')
                 .insert([{
@@ -386,14 +401,14 @@ function setupReplyForm(ticketId) {
             
             if (error) throw error;
             
-            // Recharger le ticket
+            // Reload ticket
             await openTicketDetail(ticketId);
             
         } catch (error) {
-            console.error('Erreur:', error);
-            alert('❌ Error sending message');
+            console.error('Error:', error);
+            alert('❌ Error sending message: ' + error.message);
             submitBtn.disabled = false;
-            submitBtn.innerHTML = '<span>Envoyer</span>';
+            submitBtn.innerHTML = '<span>Send</span>';
         }
     });
 }
@@ -405,6 +420,11 @@ async function closeTicket(ticketId) {
     }
     
     try {
+        // Check if Supabase is initialized
+        if (!window.supabase || !supabase) {
+            throw new Error('Supabase not initialized. Check your configuration.');
+        }
+        
         const { error } = await supabase
             .from('tickets')
             .update({ status: 'closed', updated_at: new Date().toISOString() })
@@ -412,23 +432,23 @@ async function closeTicket(ticketId) {
         
         if (error) throw error;
         
-        // Ajouter un message de fermeture
+        // Add closing message
         await supabase
             .from('messages')
             .insert([{
                 ticket_id: ticketId,
                 author: currentUser.username,
                 author_role: currentUser.role,
-                content: '✓ Ticket fermé par ' + currentUser.username
+                content: '✓ Ticket closed by ' + currentUser.username
             }]);
         
-        alert('✅ Ticket successfully closed');
+        alert('✅ Ticket closed successfully');
         closeTicketDetail();
         await loadTickets();
         
     } catch (error) {
-        console.error('Erreur:', error);
-        alert('❌ Error closing ticket');
+        console.error('Error:', error);
+        alert('❌ Error closing ticket: ' + error.message);
     }
 }
 
@@ -455,7 +475,7 @@ document.addEventListener('keydown', (e) => {
 
 // Logout function
 function logout() {
-    if (confirm('Voulez-vous vraiment vous déconnecter ?')) {
+    if (confirm('Do you really want to log out?')) {
         sessionStorage.removeItem('currentUser');
         window.location.href = 'login.html';
     }

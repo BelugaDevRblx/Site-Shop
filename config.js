@@ -1,19 +1,30 @@
-// Configuration Supabase
-// ⚠️ IMPORTANT: Remplacez ces valeurs par vos propres identifiants Supabase
+// Supabase Configuration
+// ⚠️ IMPORTANT: Replace these values with your own Supabase credentials
 const SUPABASE_URL = 'https://nkadsigrsfbyohahpbjp.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_UxUUT3ZW1iEc1pK-i3XA6g_p6HSR31S';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5rYWRzaWdyc2ZieW9oYWhwYmpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ0NDMyNTQsImV4cCI6MjA1MDAxOTI1NH0.ZFOgYJ54oaL5IFIoXQqw_v0m6jWqDpJJaVYmwjE1D_o';
 
-// Initialiser le client Supabase
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Check if Supabase is loaded
+if (typeof window.supabase === 'undefined') {
+    console.error('⚠️ Supabase not loaded! Make sure the CDN is loaded before config.js');
+}
 
-// Rôles et permissions
+// Initialize Supabase client - ONLY if not already initialized
+let supabase;
+try {
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    console.log('✅ Supabase initialized successfully');
+} catch (error) {
+    console.error('❌ Supabase initialization error:', error);
+}
+
+// Roles and permissions
 const ROLES = {
     OWNER: 'owner',
     STAFF: 'staff',
     USER: 'user'
 };
 
-// Utilisateurs avec permissions spéciales
+// Users with special permissions
 const SPECIAL_USERS = {
     '9p': ROLES.OWNER,
     'nelurio': ROLES.STAFF,
@@ -21,31 +32,38 @@ const SPECIAL_USERS = {
     'zaza': ROLES.STAFF
 };
 
-// Fonction pour obtenir le rôle d'un utilisateur
+// Function to get user role
 function getUserRole(username) {
     return SPECIAL_USERS[username.toLowerCase()] || ROLES.USER;
 }
 
-// Fonction pour vérifier si l'utilisateur est staff
+// Function to check if user is staff
 function isStaff(username) {
     const role = getUserRole(username);
     return role === ROLES.OWNER || role === ROLES.STAFF;
 }
 
-// Fonction pour vérifier si l'utilisateur est owner
+// Function to check if user is owner
 function isOwner(username) {
     return getUserRole(username) === ROLES.OWNER;
 }
 
 /*
-INSTRUCTIONS POUR CONFIGURER SUPABASE:
+═══════════════════════════════════════════════════════════════════════════════
+    SUPABASE SETUP INSTRUCTIONS
+═══════════════════════════════════════════════════════════════════════════════
 
-1. Créez un compte sur https://supabase.com
-2. Créez un nouveau projet
-3. Copiez l'URL et la clé ANON depuis Settings > API
-4. Remplacez les valeurs ci-dessus
+1. Create an account on https://supabase.com
+2. Create a new project
+3. Go to Settings > API
+4. Copy your project URL and anon/public key
+5. Replace the values at the top of this file
 
-5. Créez les tables suivantes dans SQL Editor:
+6. In Supabase, go to SQL Editor and execute this code:
+
+═══════════════════════════════════════════════════════════════════════════════
+    SQL TO EXECUTE IN SUPABASE
+═══════════════════════════════════════════════════════════════════════════════
 
 -- Table users
 CREATE TABLE users (
@@ -82,26 +100,28 @@ CREATE TABLE messages (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Index pour améliorer les performances
+-- Indexes for better performance
 CREATE INDEX idx_tickets_user_id ON tickets(user_id);
 CREATE INDEX idx_tickets_status ON tickets(status);
 CREATE INDEX idx_messages_ticket_id ON messages(ticket_id);
 
--- Activer Row Level Security (RLS)
+-- Enable Row Level Security (RLS)
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tickets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 
--- Politiques RLS pour users (tout le monde peut lire et créer)
-CREATE POLICY "Users can read all" ON users FOR SELECT USING (true);
-CREATE POLICY "Users can insert" ON users FOR INSERT WITH CHECK (true);
+-- RLS Policies
+CREATE POLICY "Public can read users" ON users FOR SELECT USING (true);
+CREATE POLICY "Public can insert users" ON users FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public can read tickets" ON tickets FOR SELECT USING (true);
+CREATE POLICY "Public can insert tickets" ON tickets FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public can update tickets" ON tickets FOR UPDATE USING (true);
+CREATE POLICY "Public can read messages" ON messages FOR SELECT USING (true);
+CREATE POLICY "Public can insert messages" ON messages FOR INSERT WITH CHECK (true);
 
--- Politiques RLS pour tickets
-CREATE POLICY "Users can read own tickets" ON tickets FOR SELECT USING (true);
-CREATE POLICY "Users can insert tickets" ON tickets FOR INSERT WITH CHECK (true);
-CREATE POLICY "Users can update own tickets" ON tickets FOR UPDATE USING (true);
+═══════════════════════════════════════════════════════════════════════════════
 
--- Politiques RLS pour messages
-CREATE POLICY "Users can read messages" ON messages FOR SELECT USING (true);
-CREATE POLICY "Users can insert messages" ON messages FOR INSERT WITH CHECK (true);
+7. Once tables are created, test your site!
+
+═══════════════════════════════════════════════════════════════════════════════
 */

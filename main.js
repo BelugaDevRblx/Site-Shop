@@ -1,4 +1,4 @@
-// Smooth scrolling pour les ancres
+// Smooth scrolling for anchors
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', function (e) {
         const href = this.getAttribute('href');
@@ -72,15 +72,20 @@ document.getElementById('ticketForm')?.addEventListener('submit', async (e) => {
 
     const submitBtn = e.target.querySelector('button[type="submit"]');
     const originalText = submitBtn.innerHTML;
-    submitBtn.innerHTML = '<span>Création en cours...</span>';
+    submitBtn.innerHTML = '<span>Creating ticket...</span>';
     submitBtn.disabled = true;
 
     try {
-        // Vérifier si l'utilisateur est connecté
+        // Check if Supabase is initialized
+        if (!window.supabase || !supabase) {
+            throw new Error('Supabase not initialized. Check your configuration.');
+        }
+        
+        // Check if user is logged in
         const currentUser = sessionStorage.getItem('currentUser');
         
         if (!currentUser) {
-            alert('You must be logged in to create a ticket. Redirecting to the login page...');
+            alert('You must be logged in to create a ticket. Redirecting to login page...');
             window.location.href = 'login.html';
             return;
         }
@@ -106,35 +111,35 @@ document.getElementById('ticketForm')?.addEventListener('submit', async (e) => {
 
         if (error) throw error;
 
-        // Ajouter un message initial automatique
+        // Add automatic initial message
         await supabase
             .from('messages')
             .insert([{
                 ticket_id: data[0].id,
                 author: 'System',
                 author_role: 'system',
-                content: `Ticket successfully created! A member of our team will contact you soon.
+                content: `Ticket created successfully! A member of our team will contact you soon.
                 
-Produit: ${ticketData.product}
-Prix: ${ticketData.price}
-Pseudo Roblox: ${ticketData.roblox_username}
+Product: ${ticketData.product}
+Price: ${ticketData.price}
+Roblox Username: ${ticketData.roblox_username}
 Email: ${ticketData.contact_email}
-Mode de paiement: ${ticketData.payment_method}
+Payment Method: ${ticketData.payment_method}
 
 ${ticketData.additional_message ? 'Message: ' + ticketData.additional_message : ''}`
             }]);
 
-        alert('✅ Ticket successfully created! You can view it in your customer area.');
+        alert('✅ Ticket created successfully! You can view it in your customer area.');
         closeTicketModal();
         
-        // Rediriger vers le dashboard
+        // Redirect to dashboard
         setTimeout(() => {
             window.location.href = 'dashboard.html';
         }, 1000);
 
     } catch (error) {
-        console.error('Erreur:', error);
-        alert('❌ Error creating ticket. Please try again.');
+        console.error('Error:', error);
+        alert('❌ Error creating ticket: ' + error.message);
         submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
     }

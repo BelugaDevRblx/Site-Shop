@@ -34,13 +34,18 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
     
     const submitBtn = e.target.querySelector('button[type="submit"]');
     const originalText = submitBtn.innerHTML;
-    submitBtn.innerHTML = '<span>Connexion...</span>';
+    submitBtn.innerHTML = '<span>Logging in...</span>';
     submitBtn.disabled = true;
     
     try {
+        // Check if Supabase is initialized
+        if (!window.supabase || !supabase) {
+            throw new Error('Supabase not initialized. Check your configuration.');
+        }
+        
         const hashedPassword = await hashPassword(password);
         
-        // Chercher l'utilisateur dans la base de données
+        // Look for user in database
         const { data: users, error } = await supabase
             .from('users')
             .select('*')
@@ -51,7 +56,7 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
         if (error) throw error;
         
         if (!users || users.length === 0) {
-            showError('Nom d\'utilisateur ou mot de passe incorrect');
+            showError('Incorrect username or password');
             submitBtn.innerHTML = originalText;
             submitBtn.disabled = false;
             return;
@@ -59,19 +64,19 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
         
         const user = users[0];
         
-        // Déterminer le rôle de l'utilisateur
+        // Determine user role (function from config.js)
         const role = getUserRole(user.username);
         user.role = role;
         
-        // Sauvegarder l'utilisateur dans la session
+        // Save user to session
         sessionStorage.setItem('currentUser', JSON.stringify(user));
         
-        // Redirection
+        // Redirect
         window.location.href = 'dashboard.html';
         
     } catch (error) {
-        console.error('Erreur de connexion:', error);
-        showError('Erreur lors de la connexion. Veuillez réessayer.');
+        console.error('Login error:', error);
+        showError('Login error: ' + error.message);
         submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
     }
@@ -85,17 +90,22 @@ document.getElementById('registerForm')?.addEventListener('submit', async (e) =>
     const password = document.getElementById('registerPassword').value;
     
     if (password.length < 6) {
-        showError('Le mot de passe doit contenir au moins 6 caractères');
+        showError('Password must contain at least 6 characters');
         return;
     }
     
     const submitBtn = e.target.querySelector('button[type="submit"]');
     const originalText = submitBtn.innerHTML;
-    submitBtn.innerHTML = '<span>Inscription...</span>';
+    submitBtn.innerHTML = '<span>Registering...</span>';
     submitBtn.disabled = true;
     
     try {
-        // Vérifier si l'utilisateur existe déjà
+        // Check if Supabase is initialized
+        if (!window.supabase || !supabase) {
+            throw new Error('Supabase not initialized. Check your configuration.');
+        }
+        
+        // Check if user already exists
         const { data: existingUsers } = await supabase
             .from('users')
             .select('username')
@@ -103,16 +113,16 @@ document.getElementById('registerForm')?.addEventListener('submit', async (e) =>
             .limit(1);
         
         if (existingUsers && existingUsers.length > 0) {
-            showError('Ce nom d\'utilisateur est déjà pris');
+            showError('This username is already taken');
             submitBtn.innerHTML = originalText;
             submitBtn.disabled = false;
             return;
         }
         
         const hashedPassword = await hashPassword(password);
-        const role = getUserRole(username);
+        const role = getUserRole(username); // Function from config.js
         
-        // Créer l'utilisateur
+        // Create user
         const { data, error } = await supabase
             .from('users')
             .insert([{
@@ -124,17 +134,17 @@ document.getElementById('registerForm')?.addEventListener('submit', async (e) =>
         
         if (error) throw error;
         
-        // Auto-login après inscription
+        // Auto-login after registration
         const user = data[0];
         user.role = role;
         sessionStorage.setItem('currentUser', JSON.stringify(user));
         
-        alert('✅ Compte créé avec succès ! Redirection...');
+        alert('✅ Account created successfully! Redirecting...');
         window.location.href = 'dashboard.html';
         
     } catch (error) {
-        console.error('Erreur d\'inscription:', error);
-        showError('Erreur lors de l\'inscription. Veuillez réessayer.');
+        console.error('Registration error:', error);
+        showError('Registration error: ' + error.message);
         submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
     }
