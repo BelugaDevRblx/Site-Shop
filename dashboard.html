@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - RBX Shop</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="dashboard.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="dashboard-sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <span class="logo-icon">🎮</span>
+                <span class="logo-text">RBX<span class="highlight">SHOP</span></span>
+            </div>
+        </div>
+        
+        <div class="user-info">
+            <div class="user-avatar" id="userAvatar">👤</div>
+            <div class="user-details">
+                <div class="user-name" id="userName">Utilisateur</div>
+                <div class="user-role" id="userRole">Client</div>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="#" class="nav-item active" data-section="tickets">
+                <span class="nav-icon">🎫</span>
+                <span class="nav-text">Mes Tickets</span>
+            </a>
+            <a href="#" class="nav-item" data-section="profile">
+                <span class="nav-icon">👤</span>
+                <span class="nav-text">Profil</span>
+            </a>
+            <a href="index.html" class="nav-item">
+                <span class="nav-icon">🏠</span>
+                <span class="nav-text">Retour au site</span>
+            </a>
+            <a href="#" class="nav-item" onclick="logout()">
+                <span class="nav-icon">🚪</span>
+                <span class="nav-text">Déconnexion</span>
+            </a>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="dashboard-main">
+        <div class="dashboard-header">
+            <h1 id="pageTitle">Mes Tickets</h1>
+            <button class="btn btn-primary" onclick="window.location.href='index.html#shop'">
+                <span>+ Nouveau Ticket</span>
+            </button>
+        </div>
+
+        <!-- Tickets Section -->
+        <div id="ticketsSection" class="content-section active">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">🎫</div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="totalTickets">0</div>
+                        <div class="stat-label">Total Tickets</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">⏳</div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="pendingTickets">0</div>
+                        <div class="stat-label">En attente</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">✅</div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="closedTickets">0</div>
+                        <div class="stat-label">Fermés</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tickets-filter">
+                <button class="filter-btn active" onclick="filterTickets('all')">Tous</button>
+                <button class="filter-btn" onclick="filterTickets('open')">Ouverts</button>
+                <button class="filter-btn" onclick="filterTickets('closed')">Fermés</button>
+            </div>
+
+            <div id="ticketsList" class="tickets-list">
+                <div class="loading">Chargement des tickets...</div>
+            </div>
+        </div>
+
+        <!-- Profile Section -->
+        <div id="profileSection" class="content-section">
+            <div class="profile-card">
+                <h2>Informations du profil</h2>
+                <div class="profile-info">
+                    <div class="info-item">
+                        <span class="info-label">Nom d'utilisateur :</span>
+                        <span class="info-value" id="profileUsername">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Rôle :</span>
+                        <span class="info-value" id="profileRole">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Inscrit le :</span>
+                        <span class="info-value" id="profileCreated">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ticket Detail Modal -->
+    <div id="ticketDetailModal" class="modal">
+        <div class="modal-content modal-large">
+            <button class="modal-close" onclick="closeTicketDetail()">&times;</button>
+            <div id="ticketDetailContent">
+                <!-- Contenu dynamique du ticket -->
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion - RBX Shop</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="login.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-bg"></div>
+        
+        <div class="login-box">
+            <a href="index.html" class="back-home">
+                ← Retour à l'accueil
+            </a>
+            
+            <div class="login-header">
+                <div class="logo">
+                    <span class="logo-icon">🎮</span>
+                    <span class="logo-text">RBX<span class="highlight">SHOP</span></span>
+                </div>
+                <h1>Espace Client</h1>
+                <p>Connectez-vous pour accéder à vos tickets</p>
+            </div>
+
+            <!-- Login Form -->
+            <form id="loginForm" class="auth-form">
+                <div class="form-group">
+                    <label>Nom d'utilisateur</label>
+                    <input type="text" id="loginUsername" required class="form-input" placeholder="Votre pseudo">
+                </div>
+                <div class="form-group">
+                    <label>Mot de passe</label>
+                    <input type="password" id="loginPassword" required class="form-input" placeholder="••••••••">
+                </div>
+                <button type="submit" class="btn btn-primary btn-full">
+                    <span>Se connecter</span>
+                </button>
+            </form>
+
+            <div class="divider">
+                <span>ou</span>
+            </div>
+
+            <!-- Register Form -->
+            <button class="btn btn-secondary btn-full" onclick="toggleRegister()">
+                <span>Créer un compte</span>
+            </button>
+
+            <div id="registerSection" class="register-section" style="display: none;">
+                <h2 class="section-title-small">Créer un compte</h2>
+                <form id="registerForm" class="auth-form">
+                    <div class="form-group">
+                        <label>Nom d'utilisateur</label>
+                        <input type="text" id="registerUsername" required class="form-input" placeholder="Choisir un pseudo">
+                    </div>
+                    <div class="form-group">
+                        <label>Mot de passe</label>
+                        <input type="password" id="registerPassword" required class="form-input" placeholder="••••••••" minlength="6">
+                        <small class="form-hint">Minimum 6 caractères</small>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full">
+                        <span>S'inscrire</span>
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-full" onclick="toggleRegister()">
+                        <span>Annuler</span>
+                    </button>
+                </form>
+            </div>
+
+            <div id="errorMessage" class="error-message"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="auth.js"></script>
+</body>
+</html>
