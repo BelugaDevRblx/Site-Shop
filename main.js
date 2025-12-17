@@ -1,28 +1,22 @@
-// Smooth scrolling
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', function (e) {
         const href = this.getAttribute('href');
         if (href !== '#' && href.startsWith('#')) {
             e.preventDefault();
             const target = document.querySelector(href);
-            if (target) {
-                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
+            if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
     });
 });
 
-// Active nav on scroll
 window.addEventListener('scroll', () => {
     const sections = document.querySelectorAll('section[id]');
     const scrollY = window.pageYOffset;
-
     sections.forEach(section => {
         const sectionHeight = section.offsetHeight;
         const sectionTop = section.offsetTop - 100;
         const sectionId = section.getAttribute('id');
         const navLink = document.querySelector(`.nav-link[href="#${sectionId}"]`);
-
         if (navLink) {
             if (scrollY > sectionTop && scrollY <= sectionTop + sectionHeight) {
                 navLink.classList.add('active');
@@ -33,7 +27,6 @@ window.addEventListener('scroll', () => {
     });
 });
 
-// Modal functions
 function openTicket(product, price) {
     const modal = document.getElementById('ticketModal');
     document.getElementById('ticketProduct').value = product;
@@ -49,20 +42,16 @@ function closeTicketModal() {
     document.getElementById('ticketForm').reset();
 }
 
-// Close modal on backdrop
 document.getElementById('ticketModal')?.addEventListener('click', (e) => {
     if (e.target.id === 'ticketModal') closeTicketModal();
 });
 
-// Escape to close
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeTicketModal();
 });
 
-// Ticket form submit
 document.getElementById('ticketForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
-
     const submitBtn = e.target.querySelector('button[type="submit"]');
     const originalText = submitBtn.innerHTML;
     submitBtn.innerHTML = '<span>Creating...</span>';
@@ -70,7 +59,6 @@ document.getElementById('ticketForm')?.addEventListener('submit', async (e) => {
 
     try {
         const currentUser = sessionStorage.getItem('currentUser');
-        
         if (!currentUser) {
             alert('You must be logged in. Redirecting...');
             window.location.href = 'login.html';
@@ -78,7 +66,6 @@ document.getElementById('ticketForm')?.addEventListener('submit', async (e) => {
         }
 
         const userData = JSON.parse(currentUser);
-
         const ticketData = {
             user_id: userData.id,
             username: userData.username,
@@ -91,18 +78,14 @@ document.getElementById('ticketForm')?.addEventListener('submit', async (e) => {
             status: 'open'
         };
 
-        const { data, error } = await supabase
-            .from('tickets')
-            .insert([ticketData])
-            .select();
-
+        const { data, error } = await window.sb.from('tickets').insert([ticketData]).select();
         if (error) throw error;
 
-        await supabase.from('messages').insert([{
+        await window.sb.from('messages').insert([{
             ticket_id: data[0].id,
             author: 'System',
             author_role: 'system',
-            content: `Ticket created successfully!
+            content: `Ticket created!
 
 Product: ${ticketData.product}
 Price: ${ticketData.price}
@@ -125,7 +108,6 @@ ${ticketData.additional_message ? 'Message: ' + ticketData.additional_message : 
     }
 });
 
-// Scroll animations
 const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
         if (entry.isIntersecting) {
@@ -142,11 +124,9 @@ document.querySelectorAll('.product-card, .feature-item').forEach(el => {
     observer.observe(el);
 });
 
-// Check if logged in
 window.addEventListener('DOMContentLoaded', () => {
     const currentUser = sessionStorage.getItem('currentUser');
     const loginBtn = document.querySelector('.btn-login');
-    
     if (currentUser && loginBtn) {
         const userData = JSON.parse(currentUser);
         loginBtn.textContent = `👤 ${userData.username}`;
