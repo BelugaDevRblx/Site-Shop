@@ -1,6 +1,20 @@
 let currentUser = null;
 let currentFilter = 'all';
 let allTickets = [];
+let realtimeChannel = null;
+
+// Profanity filter
+const PROFANITY_LIST = ['fuck', 'shit', 'bitch', 'asshole', 'dick', 'pussy', 'nigger', 'nigga', 'cunt', 'whore', 'slut', 'faggot', 'retard', 'porn', 'sex', 'xxx'];
+
+function filterProfanity(text) {
+    if (!text) return text;
+    let filtered = text;
+    PROFANITY_LIST.forEach(word => {
+        const regex = new RegExp(word, 'gi');
+        filtered = filtered.replace(regex, '*'.repeat(word.length));
+    });
+    return filtered;
+}
 
 window.addEventListener('DOMContentLoaded', async () => {
     const userData = sessionStorage.getItem('currentUser');
@@ -10,6 +24,16 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
     
     currentUser = JSON.parse(userData);
+    
+    // Check if user is banned
+    const { data: bannedUser } = await window.sb.from('banned_users').select('*').eq('username', currentUser.username).limit(1);
+    if (bannedUser && bannedUser.length > 0) {
+        alert('❌ Your account has been banned. Reason: ' + bannedUser[0].reason);
+        sessionStorage.removeItem('currentUser');
+        window.location.href = 'login.html';
+        return;
+    }
+    
     document.getElementById('userName').textContent = currentUser.username;
     document.getElementById('userRole').textContent = getRoleDisplay(currentUser.role);
     document.getElementById('profileUsername').textContent = currentUser.username;
@@ -31,6 +55,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     
     await loadTickets();
     setupNavigation();
+    setupRealtime();
 });
 
 function getRoleDisplay(role) {
@@ -52,6 +77,27 @@ function setupNavigation() {
             document.getElementById('pageTitle').textContent = titles[section] || 'Dashboard';
         });
     });
+}
+
+// Setup real-time updates
+function setupRealtime() {
+    if (realtimeChannel) realtimeChannel.unsubscribe();
+    
+    realtimeChannel = window.sb.channel('tickets-realtime')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, payload => {
+            console.log('Ticket change detected:', payload);
+            loadTickets();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, payload => {
+            console.log('Message change detected:', payload);
+            // Reload if currently viewing a ticket
+            const modal = document.getElementById('ticketDetailModal');
+            if (modal.classList.contains('active')) {
+                const currentTicketId = modal.dataset.currentTicketId;
+                if (currentTicketId) openTicketDetail(currentTicketId);
+            }
+        })
+        .subscribe();
 }
 
 async function loadTickets() {
@@ -136,6 +182,7 @@ function filterTickets(filter) {
 async function openTicketDetail(ticketId) {
     const modal = document.getElementById('ticketDetailModal');
     const content = document.getElementById('ticketDetailContent');
+    modal.dataset.currentTicketId = ticketId;
     content.innerHTML = '<div class="loading">Loading...</div>';
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
@@ -192,6 +239,11 @@ function createTicketDetailHTML(ticket, messages) {
         ${isStaff(currentUser.username) && ticket.status === 'open' ? `
             <div class="admin-actions">
                 <button class="btn btn-secondary" onclick="closeTicket('${ticket.id}')"><span>✓ Close ticket</span></button>
+                <button class="btn btn-danger" onclick="banUser('${ticket.username}')"><span>🚫 Ban User</span></button>
+            </div>` : ''}
+        ${isStaff(currentUser.username) ? `
+            <div class="admin-actions" style="margin-top: 1rem;">
+                <button class="btn btn-primary" onclick="showUnbanForm()"><span>🔓 Unban User</span></button>
             </div>` : ''}`;
 }
 
@@ -200,6 +252,7 @@ function createMessageHTML(message) {
     const formattedDate = date.toLocaleDateString('en-US', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
     const isStaffMessage = message.author_role === 'staff' || message.author_role === 'owner';
     const staffClass = isStaffMessage ? 'staff' : '';
+    const filteredContent = filterProfanity(message.content);
     
     return `
         <div class="message ${staffClass}">
@@ -207,7 +260,7 @@ function createMessageHTML(message) {
                 <span class="message-author">${message.author} ${getRoleEmoji(message.author_role)}</span>
                 <span class="message-date">${formattedDate}</span>
             </div>
-            <div class="message-content">${message.content.replace(/\n/g, '<br>')}</div>
+            <div class="message-content">${filteredContent.replace(/\n/g, '<br>')}</div>
         </div>`;
 }
 
@@ -237,7 +290,9 @@ function setupReplyForm(ticketId) {
                 content: message
             }]);
             if (error) throw error;
-            await openTicketDetail(ticketId);
+            document.getElementById('replyMessage').value = '';
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<span>Send</span>';
         } catch (error) {
             console.error('Error:', error);
             alert('❌ Error sending message: ' + error.message);
@@ -263,16 +318,58 @@ async function closeTicket(ticketId) {
         
         alert('✅ Ticket closed successfully');
         closeTicketDetail();
-        await loadTickets();
     } catch (error) {
         console.error('Error:', error);
         alert('❌ Error closing ticket: ' + error.message);
     }
 }
 
+async function banUser(username) {
+    const reason = prompt('Reason for ban:');
+    if (!reason) return;
+    
+    if (!confirm(`Ban user ${username}? Reason: ${reason}`)) return;
+    
+    try {
+        const { error } = await window.sb.from('banned_users').insert([{
+            username: username,
+            banned_by: currentUser.username,
+            reason: reason,
+            banned_at: new Date().toISOString()
+        }]);
+        if (error) throw error;
+        
+        alert(`✅ User ${username} has been banned`);
+    } catch (error) {
+        console.error('Error:', error);
+        alert('❌ Error banning user: ' + error.message);
+    }
+}
+
+function showUnbanForm() {
+    const username = prompt('Username to unban:');
+    if (!username) return;
+    unbanUser(username);
+}
+
+async function unbanUser(username) {
+    if (!confirm(`Unban user ${username}?`)) return;
+    
+    try {
+        const { error } = await window.sb.from('banned_users').delete().eq('username', username);
+        if (error) throw error;
+        
+        alert(`✅ User ${username} has been unbanned`);
+    } catch (error) {
+        console.error('Error:', error);
+        alert('❌ Error unbanning user: ' + error.message);
+    }
+}
+
 function closeTicketDetail() {
     const modal = document.getElementById('ticketDetailModal');
     modal.classList.remove('active');
+    modal.dataset.currentTicketId = '';
     document.body.style.overflow = 'auto';
 }
 
@@ -286,6 +383,7 @@ document.addEventListener('keydown', (e) => {
 
 function logout() {
     if (confirm('Do you really want to log out?')) {
+        if (realtimeChannel) realtimeChannel.unsubscribe();
         sessionStorage.removeItem('currentUser');
         window.location.href = 'login.html';
     }
