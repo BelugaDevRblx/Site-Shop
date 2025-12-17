@@ -16,7 +16,6 @@ async function hashPassword(pass) {
     return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-// LOGIN
 document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const u = document.getElementById('loginUsername').value.trim();
@@ -48,7 +47,6 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
     }
 });
 
-// REGISTER
 document.getElementById('registerForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const u = document.getElementById('registerUsername').value.trim();
