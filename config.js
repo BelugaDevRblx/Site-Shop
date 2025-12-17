@@ -1,7 +1,7 @@
 // Configuration Supabase
 // ⚠️ IMPORTANT: Remplacez ces valeurs par vos propres identifiants Supabase
-const SUPABASE_URL = 'VOTRE_SUPABASE_URL';
-const SUPABASE_ANON_KEY = 'VOTRE_SUPABASE_ANON_KEY';
+const SUPABASE_URL = 'https://nkadsigrsfbyohahpbjp.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_UxUUT3ZW1iEc1pK-i3XA6g_p6HSR31S';
 
 // Initialiser le client Supabase
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -17,7 +17,8 @@ const ROLES = {
 const SPECIAL_USERS = {
     '9p': ROLES.OWNER,
     'nelurio': ROLES.STAFF,
-    'michou': ROLES.STAFF
+    'michou': ROLES.STAFF,
+    'zaza': ROLES.STAFF
 };
 
 // Fonction pour obtenir le rôle d'un utilisateur

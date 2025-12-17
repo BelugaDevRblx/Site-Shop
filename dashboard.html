@@ -31,7 +31,7 @@
         <nav class="sidebar-nav">
             <a href="#" class="nav-item active" data-section="tickets">
                 <span class="nav-icon">🎫</span>
-                <span class="nav-text">Mes Tickets</span>
+                <span class="nav-text">My Tickets</span>
             </a>
             <a href="#" class="nav-item" data-section="profile">
                 <span class="nav-icon">👤</span>
@@ -39,11 +39,11 @@
             </a>
             <a href="index.html" class="nav-item">
                 <span class="nav-icon">🏠</span>
-                <span class="nav-text">Retour au site</span>
+                <span class="nav-text">Back to the site</span>
             </a>
             <a href="#" class="nav-item" onclick="logout()">
                 <span class="nav-icon">🚪</span>
-                <span class="nav-text">Déconnexion</span>
+                <span class="nav-text">Log Out</span>
             </a>
         </nav>
     </div>
@@ -51,9 +51,9 @@
     <!-- Main Content -->
     <div class="dashboard-main">
         <div class="dashboard-header">
-            <h1 id="pageTitle">Mes Tickets</h1>
+            <h1 id="pageTitle">My Tickets</h1>
             <button class="btn btn-primary" onclick="window.location.href='index.html#shop'">
-                <span>+ Nouveau Ticket</span>
+                <span>+ New Ticket</span>
             </button>
         </div>
 
@@ -71,44 +71,44 @@
                     <div class="stat-icon">⏳</div>
                     <div class="stat-info">
                         <div class="stat-value" id="pendingTickets">0</div>
-                        <div class="stat-label">En attente</div>
+                        <div class="stat-label">In Pending</div>
                     </div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon">✅</div>
                     <div class="stat-info">
                         <div class="stat-value" id="closedTickets">0</div>
-                        <div class="stat-label">Fermés</div>
+                        <div class="stat-label">Closed</div>
                     </div>
                 </div>
             </div>
 
             <div class="tickets-filter">
-                <button class="filter-btn active" onclick="filterTickets('all')">Tous</button>
-                <button class="filter-btn" onclick="filterTickets('open')">Ouverts</button>
-                <button class="filter-btn" onclick="filterTickets('closed')">Fermés</button>
+                <button class="filter-btn active" onclick="filterTickets('all')">All</button>
+                <button class="filter-btn" onclick="filterTickets('open')">Opened</button>
+                <button class="filter-btn" onclick="filterTickets('closed')">Closed</button>
             </div>
 
             <div id="ticketsList" class="tickets-list">
-                <div class="loading">Chargement des tickets...</div>
+                <div class="loading">Loading tickets...</div>
             </div>
         </div>
 
         <!-- Profile Section -->
         <div id="profileSection" class="content-section">
             <div class="profile-card">
-                <h2>Informations du profil</h2>
+                <h2>Info of profile</h2>
                 <div class="profile-info">
                     <div class="info-item">
-                        <span class="info-label">Nom d'utilisateur :</span>
+                        <span class="info-label">Username :</span>
                         <span class="info-value" id="profileUsername">-</span>
                     </div>
                     <div class="info-item">
-                        <span class="info-label">Rôle :</span>
+                        <span class="info-label">Roles :</span>
                         <span class="info-value" id="profileRole">-</span>
                     </div>
                     <div class="info-item">
-                        <span class="info-label">Inscrit le :</span>
+                        <span class="info-label">Subscribe the :</span>
                         <span class="info-value" id="profileCreated">-</span>
                     </div>
                 </div>

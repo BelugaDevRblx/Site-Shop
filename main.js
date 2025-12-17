@@ -80,7 +80,7 @@ document.getElementById('ticketForm')?.addEventListener('submit', async (e) => {
         const currentUser = sessionStorage.getItem('currentUser');
         
         if (!currentUser) {
-            alert('Vous devez être connecté pour créer un ticket. Redirection vers la page de connexion...');
+            alert('You must be logged in to create a ticket. Redirecting to the login page...');
             window.location.href = 'login.html';
             return;
         }
@@ -113,7 +113,7 @@ document.getElementById('ticketForm')?.addEventListener('submit', async (e) => {
                 ticket_id: data[0].id,
                 author: 'System',
                 author_role: 'system',
-                content: `Ticket créé avec succès ! Un membre de notre équipe vous contactera bientôt.
+                content: `Ticket successfully created! A member of our team will contact you soon.
                 
 Produit: ${ticketData.product}
 Prix: ${ticketData.price}
@@ -124,7 +124,7 @@ Mode de paiement: ${ticketData.payment_method}
 ${ticketData.additional_message ? 'Message: ' + ticketData.additional_message : ''}`
             }]);
 
-        alert('✅ Ticket créé avec succès ! Vous pouvez le consulter dans votre espace client.');
+        alert('✅ Ticket successfully created! You can view it in your customer area.');
         closeTicketModal();
         
         // Rediriger vers le dashboard
@@ -134,7 +134,7 @@ ${ticketData.additional_message ? 'Message: ' + ticketData.additional_message : 
 
     } catch (error) {
         console.error('Erreur:', error);
-        alert('❌ Erreur lors de la création du ticket. Veuillez réessayer.');
+        alert('❌ Error creating ticket. Please try again.');
         submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
     }

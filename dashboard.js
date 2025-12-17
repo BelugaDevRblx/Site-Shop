@@ -239,7 +239,7 @@ async function openTicketDetail(ticketId) {
         
     } catch (error) {
         console.error('Erreur:', error);
-        content.innerHTML = '<div class="loading">❌ Erreur de chargement</div>';
+        content.innerHTML = '<div class="loading">❌ Loading error</div>';
     }
 }
 
@@ -255,7 +255,7 @@ function createTicketDetailHTML(ticket, messages) {
     });
     
     const statusClass = ticket.status === 'open' ? 'open' : 'closed';
-    const statusText = ticket.status === 'open' ? '⏳ Ouvert' : '✅ Fermé';
+    const statusText = ticket.status === 'open' ? 'Open ⏳' : '✅ Closed';
     
     return `
         <div class="ticket-detail-header">
@@ -391,7 +391,7 @@ function setupReplyForm(ticketId) {
             
         } catch (error) {
             console.error('Erreur:', error);
-            alert('❌ Erreur lors de l\'envoi du message');
+            alert('❌ Error sending message');
             submitBtn.disabled = false;
             submitBtn.innerHTML = '<span>Envoyer</span>';
         }
@@ -400,7 +400,7 @@ function setupReplyForm(ticketId) {
 
 // Close ticket (staff only)
 async function closeTicket(ticketId) {
-    if (!confirm('Êtes-vous sûr de vouloir fermer ce ticket ?')) {
+    if (!confirm('Are you sure you want to close this ticket?')) {
         return;
     }
     
@@ -422,13 +422,13 @@ async function closeTicket(ticketId) {
                 content: '✓ Ticket fermé par ' + currentUser.username
             }]);
         
-        alert('✅ Ticket fermé avec succès');
+        alert('✅ Ticket successfully closed');
         closeTicketDetail();
         await loadTickets();
         
     } catch (error) {
         console.error('Erreur:', error);
-        alert('❌ Erreur lors de la fermeture du ticket');
+        alert('❌ Error closing ticket');
     }
 }
 
