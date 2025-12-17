@@ -1,39 +1,14 @@
-// Supabase Configuration
-const SUPABASE_URL = 'https://nkadsigrsfbyohahpbjp.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5rYWRzaWdyc2ZieW9oYWhwYmpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU5NjcxNzIsImV4cCI6MjA4MTU0MzE3Mn0.P7iN-jMF0d3MskrkSPEe7UdNnP_tkaDRJaKC9O0cSQ4';
+// Config
+window.SUPABASE_URL = 'https://nkadsigrsfbyohahpbjp.supabase.co';
+window.SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5rYWRzaWdyc2ZieW9oYWhwYmpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU5NjcxNzIsImV4cCI6MjA4MTU0MzE3Mn0.P7iN-jMF0d3MskrkSPEe7UdNnP_tkaDRJaKC9O0cSQ4';
 
-// Initialize Supabase - UNE SEULE FOIS !
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+window.supabase = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY);
 
-// Roles
-const ROLES = {
-    OWNER: 'owner',
-    STAFF: 'staff',
-    USER: 'user'
-};
+window.ROLES = { OWNER: 'owner', STAFF: 'staff', USER: 'user' };
+window.SPECIAL_USERS = { '9p': 'owner', 'nelurio': 'staff', 'michou': 'staff', 'zaza': 'staff' };
 
-// Special users
-const SPECIAL_USERS = {
-    '9p': ROLES.OWNER,
-    'nelurio': ROLES.STAFF,
-    'michou': ROLES.STAFF,
-    'zaza': ROLES.STAFF
-};
+window.getUserRole = (username) => window.SPECIAL_USERS[username.toLowerCase()] || 'user';
+window.isStaff = (username) => ['owner', 'staff'].includes(window.getUserRole(username));
+window.isOwner = (username) => window.getUserRole(username) === 'owner';
 
-// Get user role
-function getUserRole(username) {
-    return SPECIAL_USERS[username.toLowerCase()] || ROLES.USER;
-}
-
-// Check if staff
-function isStaff(username) {
-    const role = getUserRole(username);
-    return role === ROLES.OWNER || role === ROLES.STAFF;
-}
-
-// Check if owner
-function isOwner(username) {
-    return getUserRole(username) === ROLES.OWNER;
-}
-
-console.log('✅ Config loaded');
+console.log('✅ Ready');
