@@ -1,7 +1,7 @@
 // Supabase Configuration
 // ⚠️ IMPORTANT: Replace these values with your own Supabase credentials
 const SUPABASE_URL = 'https://nkadsigrsfbyohahpbjp.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5rYWRzaWdyc2ZieW9oYWhwYmpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ0NDMyNTQsImV4cCI6MjA1MDAxOTI1NH0.ZFOgYJ54oaL5IFIoXQqw_v0m6jWqDpJJaVYmwjE1D_o';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5rYWRzaWdyc2ZieW9oYWhwYmpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU5NjcxNzIsImV4cCI6MjA4MTU0MzE3Mn0.P7iN-jMF0d3MskrkSPEe7UdNnP_tkaDRJaKC9O0cSQ4';
 
 // Check if Supabase is loaded
 if (typeof window.supabase === 'undefined') {
