@@ -1,12 +1,13 @@
 let currentUser = null;
 let currentFilter = 'all';
 let allTickets = [];
-let realtimeChannel = null;
+let ticketsChannel = null;
 let messagesChannel = null;
+let currentTicketId = null;
 
-// Sound notification using your MP3 file  
+// Sound notification
 const notificationSound = new Audio('Notifyseund.mp3');
-notificationSound.volume = 0.5; // 50% volume
+notificationSound.volume = 0.5;
 
 function playNotification() {
     try {
@@ -93,79 +94,67 @@ function setupNavigation() {
     });
 }
 
-// Setup real-time for tickets list
+// ONE channel for all messages - listen to everything
 function setupRealtime() {
-    if (realtimeChannel) {
-        window.sb.removeChannel(realtimeChannel);
-    }
+    console.log('🔄 Setting up realtime...');
     
-    // Channel for tickets
-    realtimeChannel = window.sb
-        .channel('public:tickets')
+    // Tickets channel
+    ticketsChannel = window.sb
+        .channel('db-tickets-changes')
         .on('postgres_changes', 
             { event: 'INSERT', schema: 'public', table: 'tickets' }, 
             (payload) => {
-                console.log('✅ New ticket detected:', payload);
-                
-                // Play sound ONLY for staff when new ticket is created
+                console.log('✅ NEW TICKET:', payload.new);
                 if (isStaff(currentUser.username) && payload.new.username !== currentUser.username) {
                     playNotification();
                 }
-                
                 loadTickets();
             }
         )
         .on('postgres_changes', 
             { event: 'UPDATE', schema: 'public', table: 'tickets' }, 
             (payload) => {
-                console.log('✅ Ticket updated:', payload);
+                console.log('✅ TICKET UPDATED:', payload.new);
                 loadTickets();
             }
         )
         .subscribe((status) => {
-            console.log('Tickets channel status:', status);
+            if (status === 'SUBSCRIBED') {
+                console.log('✅ Tickets realtime: ACTIVE');
+            }
         });
-}
-
-// Setup real-time for messages in current ticket
-function setupMessagesRealtime(ticketId) {
-    // Remove old messages channel
-    if (messagesChannel) {
-        window.sb.removeChannel(messagesChannel);
-    }
     
-    // Create new channel for this ticket's messages
+    // Messages channel - listen to ALL messages
     messagesChannel = window.sb
-        .channel(`public:messages:${ticketId}`)
+        .channel('db-messages-changes')
         .on('postgres_changes',
-            { event: 'INSERT', schema: 'public', table: 'messages', filter: `ticket_id=eq.${ticketId}` },
+            { event: 'INSERT', schema: 'public', table: 'messages' },
             (payload) => {
-                console.log('✅ New message detected:', payload);
+                console.log('✅ NEW MESSAGE:', payload.new);
                 
                 const newMessage = payload.new;
                 
-                // Play sound if message is NOT from me
-                if (newMessage.author !== currentUser.username) {
-                    playNotification();
-                    console.log('🔊 Playing notification for message from:', newMessage.author);
+                // If viewing this ticket, add message
+                if (currentTicketId === newMessage.ticket_id) {
+                    console.log('💬 Adding message to current ticket');
+                    
+                    // Play sound if not from me
+                    if (newMessage.author !== currentUser.username) {
+                        console.log('🔊 Playing sound');
+                        playNotification();
+                    }
+                    
+                    addMessageToUI(newMessage);
+                } else {
+                    console.log('⏭️ Message for different ticket, ignoring');
                 }
-                
-                // Add message to the list instantly
-                addMessageToUI(newMessage);
             }
         )
         .subscribe((status) => {
-            console.log('Messages channel status:', status);
+            if (status === 'SUBSCRIBED') {
+                console.log('✅ Messages realtime: ACTIVE');
+            }
         });
-}
-
-// Stop listening to messages when closing ticket
-function stopMessagesRealtime() {
-    if (messagesChannel) {
-        window.sb.removeChannel(messagesChannel);
-        messagesChannel = null;
-        console.log('Messages channel removed');
-    }
 }
 
 async function loadTickets() {
@@ -248,6 +237,9 @@ function filterTickets(filter) {
 }
 
 async function openTicketDetail(ticketId) {
+    console.log('📂 Opening ticket:', ticketId);
+    currentTicketId = ticketId; // Set current ticket ID
+    
     const modal = document.getElementById('ticketDetailModal');
     const content = document.getElementById('ticketDetailContent');
     modal.dataset.currentTicketId = ticketId;
@@ -265,16 +257,14 @@ async function openTicketDetail(ticketId) {
         content.innerHTML = createTicketDetailHTML(ticket, messages);
         setupReplyForm(ticketId);
         
-        // START listening for new messages on this ticket
-        setupMessagesRealtime(ticketId);
-        
-        // Scroll to bottom
         setTimeout(() => {
             const messagesList = document.getElementById('messagesList');
             if (messagesList) {
                 messagesList.scrollTop = messagesList.scrollHeight;
             }
         }, 100);
+        
+        console.log('✅ Ticket opened, listening for messages on ticket:', ticketId);
     } catch (error) {
         console.error('Error:', error);
         content.innerHTML = '<div class="loading">❌ Loading error: ' + error.message + '</div>';
@@ -304,7 +294,7 @@ function createTicketDetailHTML(ticket, messages) {
             ${isStaff(currentUser.username) ? `<div class="detail-row"><span class="detail-label">Client</span><span class="detail-value">${ticket.username}</span></div>` : ''}
         </div>
         <div class="messages-section">
-            <h3 class="messages-title">💬 Messages (Real-time)</h3>
+            <h3 class="messages-title">💬 Messages <span style="color: #00d9ff; font-size: 0.8rem;">(Live)</span></h3>
             <div class="messages-list" id="messagesList">${messages.map(msg => createMessageHTML(msg)).join('')}</div>
             ${ticket.status === 'open' ? `
                 <form class="reply-form" id="replyForm">
@@ -349,23 +339,30 @@ function getRoleEmoji(role) {
     return emojis[role] || '';
 }
 
-// Add new message to UI instantly (called by real-time)
 function addMessageToUI(message) {
     const messagesList = document.getElementById('messagesList');
-    if (!messagesList) return;
+    if (!messagesList) {
+        console.log('⚠️ Messages list not found');
+        return;
+    }
+    
+    // Check if message already exists
+    const existingMessage = messagesList.querySelector(`[data-message-id="${message.id}"]`);
+    if (existingMessage) {
+        console.log('⏭️ Message already in UI');
+        return;
+    }
     
     const wasAtBottom = messagesList.scrollHeight - messagesList.scrollTop <= messagesList.clientHeight + 100;
     
-    // Add new message
     const messageHTML = createMessageHTML(message);
     messagesList.insertAdjacentHTML('beforeend', messageHTML);
     
-    // Scroll to bottom if was already at bottom
     if (wasAtBottom) {
         messagesList.scrollTop = messagesList.scrollHeight;
     }
     
-    console.log('✅ Message added to UI from:', message.author);
+    console.log('✅ Message added to UI:', message.author, '-', message.content.substring(0, 20));
 }
 
 function setupReplyForm(ticketId) {
@@ -382,6 +379,7 @@ function setupReplyForm(ticketId) {
         submitBtn.innerHTML = '<span>Sending...</span>';
         
         try {
+            console.log('📤 Sending message...');
             const { error } = await window.sb.from('messages').insert([{
                 ticket_id: ticketId,
                 author: currentUser.username,
@@ -391,14 +389,11 @@ function setupReplyForm(ticketId) {
             
             if (error) throw error;
             
-            // Clear textarea
             document.getElementById('replyMessage').value = '';
-            
             submitBtn.disabled = false;
             submitBtn.innerHTML = '<span>Send</span>';
             
-            // Message will appear automatically via real-time
-            console.log('✅ Message sent, waiting for real-time...');
+            console.log('✅ Message sent, waiting for realtime update...');
             
         } catch (error) {
             console.error('Error:', error);
@@ -513,13 +508,13 @@ async function unbanUser(username) {
 }
 
 function closeTicketDetail() {
+    console.log('🚪 Closing ticket');
+    currentTicketId = null; // Clear current ticket
+    
     const modal = document.getElementById('ticketDetailModal');
     modal.classList.remove('active');
     modal.dataset.currentTicketId = '';
     document.body.style.overflow = 'auto';
-    
-    // STOP listening to messages
-    stopMessagesRealtime();
 }
 
 document.getElementById('ticketDetailModal')?.addEventListener('click', (e) => {
@@ -532,7 +527,7 @@ document.addEventListener('keydown', (e) => {
 
 function logout() {
     if (confirm('Do you really want to log out?')) {
-        if (realtimeChannel) window.sb.removeChannel(realtimeChannel);
+        if (ticketsChannel) window.sb.removeChannel(ticketsChannel);
         if (messagesChannel) window.sb.removeChannel(messagesChannel);
         sessionStorage.removeItem('currentUser');
         window.location.href = 'login.html';
