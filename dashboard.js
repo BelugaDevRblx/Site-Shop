@@ -2,24 +2,19 @@ let currentUser = null;
 let currentFilter = 'all';
 let allTickets = [];
 let realtimeChannel = null;
+let messagesChannel = null;
 
-// Sound notification
-const notificationSound = new Audio('./Notify.mp3');
-notificationSound.volume = 0.5;
+// Sound notification using your MP3 file  
+const notificationSound = new Audio('Notifyseund.mp3');
+notificationSound.volume = 0.5; // 50% volume
 
-// Test if sound works
-function testSound() {
-    notificationSound.play().then(() => {
-        console.log('✅ Sound test OK');
-    }).catch(err => {
-        console.error('❌ Sound test failed:', err);
-    });
-}
-
-// Play notification
 function playNotification() {
-    notificationSound.currentTime = 0;
-    notificationSound.play().catch(err => console.log('Sound error:', err));
+    try {
+        notificationSound.currentTime = 0;
+        notificationSound.play().catch(e => console.log('Sound play failed:', e));
+    } catch (error) {
+        console.log('Sound not supported');
+    }
 }
 
 // Profanity filter
@@ -45,16 +40,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     currentUser = JSON.parse(userData);
     
     // Check if user is banned
-    try {
-        const { data: bannedUser } = await window.sb.from('banned_users').select('*').eq('username', currentUser.username).limit(1);
-        if (bannedUser && bannedUser.length > 0) {
-            alert('❌ Your account has been banned. Reason: ' + bannedUser[0].reason);
-            sessionStorage.removeItem('currentUser');
-            window.location.href = 'login.html';
-            return;
-        }
-    } catch (err) {
-        console.log('No banned_users table yet');
+    const { data: bannedUser } = await window.sb.from('banned_users').select('*').eq('username', currentUser.username).limit(1);
+    if (bannedUser && bannedUser.length > 0) {
+        alert('❌ Your account has been banned. Reason: ' + bannedUser[0].reason);
+        sessionStorage.removeItem('currentUser');
+        window.location.href = 'login.html';
+        return;
     }
     
     document.getElementById('userName').textContent = currentUser.username;
@@ -78,16 +69,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     
     await loadTickets();
     setupNavigation();
-    
-    // Setup realtime AFTER everything is loaded
-    setTimeout(() => {
-        setupRealtime();
-        console.log('✅ Realtime setup complete');
-    }, 1000);
-    
-    // Add test sound button
-    console.log('💡 Click anywhere to enable sound');
-    document.body.addEventListener('click', testSound, { once: true });
+    setupRealtime();
 });
 
 function getRoleDisplay(role) {
@@ -111,93 +93,79 @@ function setupNavigation() {
     });
 }
 
-// Setup real-time with DEBUG
+// Setup real-time for tickets list
 function setupRealtime() {
     if (realtimeChannel) {
-        console.log('🔄 Unsubscribing old channel');
-        realtimeChannel.unsubscribe();
+        window.sb.removeChannel(realtimeChannel);
     }
     
-    console.log('🎯 Setting up realtime channel...');
-    
+    // Channel for tickets
     realtimeChannel = window.sb
         .channel('public:tickets')
-        .on(
-            'postgres_changes',
-            {
-                event: '*',
-                schema: 'public',
-                table: 'tickets'
-            },
+        .on('postgres_changes', 
+            { event: 'INSERT', schema: 'public', table: 'tickets' }, 
             (payload) => {
-                console.log('🎫 TICKET CHANGE:', payload);
+                console.log('✅ New ticket detected:', payload);
                 
-                if (payload.eventType === 'INSERT' && isStaff(currentUser.username)) {
-                    console.log('🔔 Playing sound for new ticket');
+                // Play sound ONLY for staff when new ticket is created
+                if (isStaff(currentUser.username) && payload.new.username !== currentUser.username) {
                     playNotification();
                 }
                 
                 loadTickets();
             }
         )
-        .on(
-            'postgres_changes',
-            {
-                event: '*',
-                schema: 'public',
-                table: 'messages'
-            },
-            async (payload) => {
-                console.log('💬 MESSAGE CHANGE:', payload);
-                
-                if (payload.eventType === 'INSERT' && payload.new) {
-                    // Get ticket info
-                    try {
-                        const { data: ticket } = await window.sb
-                            .from('tickets')
-                            .select('username')
-                            .eq('id', payload.new.ticket_id)
-                            .single();
-                        
-                        const isMyMessage = payload.new.author === currentUser.username;
-                        const isMyTicket = ticket && ticket.username === currentUser.username;
-                        const amStaff = isStaff(currentUser.username);
-                        
-                        console.log('📊 Message check:', {
-                            isMyMessage,
-                            isMyTicket,
-                            amStaff,
-                            shouldPlay: !isMyMessage && (isMyTicket || amStaff)
-                        });
-                        
-                        if (!isMyMessage && (isMyTicket || amStaff)) {
-                            console.log('🔔 Playing sound for new message');
-                            playNotification();
-                        }
-                    } catch (err) {
-                        console.error('Error checking ticket:', err);
-                    }
-                    
-                    // Reload messages if viewing this ticket
-                    const modal = document.getElementById('ticketDetailModal');
-                    if (modal && modal.classList.contains('active')) {
-                        const currentTicketId = modal.dataset.currentTicketId;
-                        console.log('🔄 Current ticket:', currentTicketId, 'New message ticket:', payload.new.ticket_id);
-                        
-                        if (currentTicketId === payload.new.ticket_id) {
-                            console.log('✅ Reloading messages...');
-                            await reloadMessages(currentTicketId);
-                        }
-                    }
-                }
+        .on('postgres_changes', 
+            { event: 'UPDATE', schema: 'public', table: 'tickets' }, 
+            (payload) => {
+                console.log('✅ Ticket updated:', payload);
+                loadTickets();
             }
         )
         .subscribe((status) => {
-            console.log('📡 Realtime status:', status);
-            if (status === 'SUBSCRIBED') {
-                console.log('✅ Successfully subscribed to realtime!');
-            }
+            console.log('Tickets channel status:', status);
         });
+}
+
+// Setup real-time for messages in current ticket
+function setupMessagesRealtime(ticketId) {
+    // Remove old messages channel
+    if (messagesChannel) {
+        window.sb.removeChannel(messagesChannel);
+    }
+    
+    // Create new channel for this ticket's messages
+    messagesChannel = window.sb
+        .channel(`public:messages:${ticketId}`)
+        .on('postgres_changes',
+            { event: 'INSERT', schema: 'public', table: 'messages', filter: `ticket_id=eq.${ticketId}` },
+            (payload) => {
+                console.log('✅ New message detected:', payload);
+                
+                const newMessage = payload.new;
+                
+                // Play sound if message is NOT from me
+                if (newMessage.author !== currentUser.username) {
+                    playNotification();
+                    console.log('🔊 Playing notification for message from:', newMessage.author);
+                }
+                
+                // Add message to the list instantly
+                addMessageToUI(newMessage);
+            }
+        )
+        .subscribe((status) => {
+            console.log('Messages channel status:', status);
+        });
+}
+
+// Stop listening to messages when closing ticket
+function stopMessagesRealtime() {
+    if (messagesChannel) {
+        window.sb.removeChannel(messagesChannel);
+        messagesChannel = null;
+        console.log('Messages channel removed');
+    }
 }
 
 async function loadTickets() {
@@ -280,7 +248,6 @@ function filterTickets(filter) {
 }
 
 async function openTicketDetail(ticketId) {
-    console.log('📂 Opening ticket:', ticketId);
     const modal = document.getElementById('ticketDetailModal');
     const content = document.getElementById('ticketDetailContent');
     modal.dataset.currentTicketId = ticketId;
@@ -295,16 +262,17 @@ async function openTicketDetail(ticketId) {
         const { data: messages, error: messagesError } = await window.sb.from('messages').select('*').eq('ticket_id', ticketId).order('created_at', { ascending: true });
         if (messagesError) throw messagesError;
         
-        console.log('✅ Loaded', messages.length, 'messages');
-        
         content.innerHTML = createTicketDetailHTML(ticket, messages);
         setupReplyForm(ticketId);
         
+        // START listening for new messages on this ticket
+        setupMessagesRealtime(ticketId);
+        
+        // Scroll to bottom
         setTimeout(() => {
             const messagesList = document.getElementById('messagesList');
             if (messagesList) {
                 messagesList.scrollTop = messagesList.scrollHeight;
-                console.log('📜 Scrolled to bottom');
             }
         }, 100);
     } catch (error) {
@@ -336,7 +304,7 @@ function createTicketDetailHTML(ticket, messages) {
             ${isStaff(currentUser.username) ? `<div class="detail-row"><span class="detail-label">Client</span><span class="detail-value">${ticket.username}</span></div>` : ''}
         </div>
         <div class="messages-section">
-            <h3 class="messages-title">💬 Messages</h3>
+            <h3 class="messages-title">💬 Messages (Real-time)</h3>
             <div class="messages-list" id="messagesList">${messages.map(msg => createMessageHTML(msg)).join('')}</div>
             ${ticket.status === 'open' ? `
                 <form class="reply-form" id="replyForm">
@@ -351,6 +319,7 @@ function createTicketDetailHTML(ticket, messages) {
             <div class="admin-actions">
                 <button class="btn btn-secondary" onclick="closeTicket('${ticket.id}')"><span>✓ Close ticket</span></button>
                 <button class="btn btn-danger" onclick="banUser('${ticket.username}')"><span>🚫 Ban User</span></button>
+                <button class="btn btn-primary" onclick="viewUserIPs('${ticket.username}')"><span>🔍 View IPs</span></button>
             </div>` : ''}
         ${isStaff(currentUser.username) ? `
             <div class="admin-actions" style="margin-top: 1rem;">
@@ -380,6 +349,25 @@ function getRoleEmoji(role) {
     return emojis[role] || '';
 }
 
+// Add new message to UI instantly (called by real-time)
+function addMessageToUI(message) {
+    const messagesList = document.getElementById('messagesList');
+    if (!messagesList) return;
+    
+    const wasAtBottom = messagesList.scrollHeight - messagesList.scrollTop <= messagesList.clientHeight + 100;
+    
+    // Add new message
+    const messageHTML = createMessageHTML(message);
+    messagesList.insertAdjacentHTML('beforeend', messageHTML);
+    
+    // Scroll to bottom if was already at bottom
+    if (wasAtBottom) {
+        messagesList.scrollTop = messagesList.scrollHeight;
+    }
+    
+    console.log('✅ Message added to UI from:', message.author);
+}
+
 function setupReplyForm(ticketId) {
     const form = document.getElementById('replyForm');
     if (!form) return;
@@ -394,19 +382,24 @@ function setupReplyForm(ticketId) {
         submitBtn.innerHTML = '<span>Sending...</span>';
         
         try {
-            console.log('📤 Sending message...');
             const { error } = await window.sb.from('messages').insert([{
                 ticket_id: ticketId,
                 author: currentUser.username,
                 author_role: currentUser.role,
                 content: message
             }]);
+            
             if (error) throw error;
             
-            console.log('✅ Message sent!');
+            // Clear textarea
             document.getElementById('replyMessage').value = '';
+            
             submitBtn.disabled = false;
             submitBtn.innerHTML = '<span>Send</span>';
+            
+            // Message will appear automatically via real-time
+            console.log('✅ Message sent, waiting for real-time...');
+            
         } catch (error) {
             console.error('Error:', error);
             alert('❌ Error sending message: ' + error.message);
@@ -414,32 +407,6 @@ function setupReplyForm(ticketId) {
             submitBtn.innerHTML = '<span>Send</span>';
         }
     });
-}
-
-async function reloadMessages(ticketId) {
-    console.log('🔄 Reloading messages for ticket:', ticketId);
-    try {
-        const { data: messages, error } = await window.sb
-            .from('messages')
-            .select('*')
-            .eq('ticket_id', ticketId)
-            .order('created_at', { ascending: true });
-        
-        if (error) throw error;
-        
-        const messagesList = document.getElementById('messagesList');
-        if (messagesList) {
-            const wasAtBottom = messagesList.scrollHeight - messagesList.scrollTop <= messagesList.clientHeight + 100;
-            messagesList.innerHTML = messages.map(msg => createMessageHTML(msg)).join('');
-            
-            if (wasAtBottom) {
-                messagesList.scrollTop = messagesList.scrollHeight;
-            }
-            console.log('✅ Messages reloaded:', messages.length);
-        }
-    } catch (error) {
-        console.error('Error reloading messages:', error);
-    }
 }
 
 async function closeTicket(ticketId) {
@@ -467,20 +434,61 @@ async function closeTicket(ticketId) {
 async function banUser(username) {
     const reason = prompt('Reason for ban:');
     if (!reason) return;
-    if (!confirm(`Ban user ${username}? Reason: ${reason}`)) return;
+    
+    if (!confirm(`Ban user ${username} and their IP? Reason: ${reason}`)) return;
     
     try {
+        const { data: userData } = await window.sb.from('users').select('ip_address, last_ip').eq('username', username).limit(1);
+        const userIP = userData && userData.length > 0 ? (userData[0].last_ip || userData[0].ip_address) : null;
+        
         const { error } = await window.sb.from('banned_users').insert([{
             username: username,
+            ip_address: userIP,
             banned_by: currentUser.username,
             reason: reason,
             banned_at: new Date().toISOString()
         }]);
+        
         if (error) throw error;
-        alert(`✅ User ${username} has been banned`);
+        
+        if (userIP) {
+            await window.sb.from('ip_ban_logs').insert([{
+                ip_address: userIP,
+                username: username,
+                banned_by: currentUser.username,
+                reason: reason
+            }]);
+        }
+        
+        alert(`✅ User ${username} banned!\nIP: ${userIP || 'Unknown'}`);
     } catch (error) {
         console.error('Error:', error);
         alert('❌ Error banning user: ' + error.message);
+    }
+}
+
+async function viewUserIPs(username) {
+    try {
+        const { data, error } = await window.sb.from('users').select('ip_address, last_ip, last_login, created_at').eq('username', username).limit(1);
+        
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+            const user = data[0];
+            const message = `
+User: ${username}
+Registration IP: ${user.ip_address || 'Unknown'}
+Last IP: ${user.last_ip || 'Unknown'}
+Last Login: ${user.last_login ? new Date(user.last_login).toLocaleString() : 'Never'}
+Registered: ${new Date(user.created_at).toLocaleString()}
+            `;
+            alert(message);
+        } else {
+            alert('User not found');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('❌ Error: ' + error.message);
     }
 }
 
@@ -492,9 +500,11 @@ function showUnbanForm() {
 
 async function unbanUser(username) {
     if (!confirm(`Unban user ${username}?`)) return;
+    
     try {
         const { error } = await window.sb.from('banned_users').delete().eq('username', username);
         if (error) throw error;
+        
         alert(`✅ User ${username} has been unbanned`);
     } catch (error) {
         console.error('Error:', error);
@@ -507,6 +517,9 @@ function closeTicketDetail() {
     modal.classList.remove('active');
     modal.dataset.currentTicketId = '';
     document.body.style.overflow = 'auto';
+    
+    // STOP listening to messages
+    stopMessagesRealtime();
 }
 
 document.getElementById('ticketDetailModal')?.addEventListener('click', (e) => {
@@ -519,7 +532,8 @@ document.addEventListener('keydown', (e) => {
 
 function logout() {
     if (confirm('Do you really want to log out?')) {
-        if (realtimeChannel) realtimeChannel.unsubscribe();
+        if (realtimeChannel) window.sb.removeChannel(realtimeChannel);
+        if (messagesChannel) window.sb.removeChannel(messagesChannel);
         sessionStorage.removeItem('currentUser');
         window.location.href = 'login.html';
     }
